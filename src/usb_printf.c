@@ -1,4 +1,6 @@
 #include "usb_printf.h"
+#include "adc.h"
+
 void init_ports(void);
 void init_clock(void);
 
@@ -71,6 +73,11 @@ void usb_receive_string(void) {
         DEBUG("Entering shell\r\n");
         console();
     } else {
-        DEBUG("USB (l=%d): %s\r\n", msg_len, msg);
+      DEBUG("USB l=%d: %s", msg_len, msg);
+      if(new_adc){
+	DEBUG(", t=0x%04x, iv=0x%04x", last_conv, last_adc_iv);
+	new_adc = 0;
+      }
+      DEBUG("\r\n");
     }
 }

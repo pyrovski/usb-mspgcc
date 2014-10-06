@@ -36,7 +36,9 @@
 
 //Indicates data has been received without an open rcv operation
 volatile BYTE bCDCDataReceived_event = FALSE;
-volatile uint16_t last_conv;
+volatile uint16_t last_conv = 0;
+volatile uint8_t new_adc = 0;
+volatile uint16_t last_adc_iv = 0;
 
 // Function declarations
 void msp_init(void);
@@ -73,17 +75,14 @@ int main(void) {
     }
 }
 
-/*
-#ifndef interrupt
-#define interrupt(x) void __attribute__((interrupt (x)))
-#endif
-*/
 #pragma vector=ADC12_VECTOR
 __interrupt void ADC_ISR(void){
   uint16_t iv = ADC12IV;
+  last_adc_iv = iv;
   if(iv & ADC12IV_ADC12IFG0){
     // ADC12MEM0 result is ready
     last_conv = ADC12MEM0;
+    new_adc = 1;
   }
 }
 
@@ -96,10 +95,13 @@ void msp_init(void) {
     usb_printf_init();
 
     // configure ADC for temperature
+    REFCTL0 &= ~REFMSTR;
+
     // 1.5V reference
     ADC12CTL0 = 
       ADC12ON      | // turn on ADC
       ADC12REFON   | // turn on ADC reference
+      //ADC12REF2_5V | // 2.5V reference
       ADC12MSC     | // automatic conversion restart
       ADC12SHT0_12 ; // 1024 ADC12CLK cycles sample-and-hold
     ADC12CTL1 = 
@@ -111,13 +113,14 @@ void msp_init(void) {
       ADC12CSTARTADD_0 ; // store result in conversion address 0
     // temperature sensor on
     ADC12CTL2 = 
-      ADC12PDIV |  // predivide ADC clock by 4
-      ADC12RES1 ;  // 12-bit resolution
+      ADC12PDIV        |  // predivide ADC clock by 4
+      ADC12RES1        ;  // 12-bit resolution
     ADC12MCTL0 = 
-      ADC12INCH_10 | // select temperature diode
-      ADC12SREF_1  ; // VREF+/AVSS
+      ADC12INCH_10     | // select temperature diode
+      //ADC12INCH_11     | // select (Vcc - Vss)/2
+      ADC12SREF_1      ; // VREF+/AVSS
     ADC12IE = 
-      ADC12IE0 ; // enable interrupt on ADC12 mem 0 result
+      ADC12IE0         ; // enable interrupt on ADC12 mem 0 result
 
     // Enable global interrupts
     __enable_interrupt();
