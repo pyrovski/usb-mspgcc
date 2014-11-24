@@ -47,16 +47,23 @@ void init_clock(void) {
     // enable XT2 pins for F5529
     P5SEL |= 0x0C;
 
-    // use XT2 for FLL source
-    UCSCTL3 = SELREF__XT2CLK;
-
-    // use XT1 for ACLK, DCOCLKDIV for SMCLK and DCOCLK for MCLK
-    UCSCTL4 = SELA__XT1CLK | SELS__DCOCLKDIV | SELM__DCOCLK;
+    UCSCTL3 = (UCSCTL3 & ~(SELREF_7)) | (SELREF__REFOCLK);
+    UCSCTL4 = (UCSCTL4 & ~(SELA_7)) | (SELA__REFOCLK);
 
     //Start the USB crystal (XT2)
     XT2_Start(XT2DRIVE_0);
 
-    Init_FLL_Settle(16000, 4);
+    // use XT2 for FLL source
+    UCSCTL3 = SELREF__XT2CLK;
+
+    // use XT1 for ACLK, XT2 for SMCLK and MCLK
+    UCSCTL4 = SELA__XT1CLK | SELS__XT2CLK | SELM__XT2CLK;
+
+    //!@todo stuck here
+    //Init_FLL_Settle(8000, 4);
+
+    P1DIR |= BIT0;
+    P1OUT |= BIT0;
 }
 
 extern volatile BYTE bCDCDataReceived_event;   

@@ -91,6 +91,9 @@ void msp_init(void) {
     // Stop the watchdog
     wdt_stop();
 
+    P4DIR |= BIT7;
+    P4OUT |= BIT7;
+
     // Initialize USB interface and clocks
     usb_printf_init();
 
@@ -189,11 +192,11 @@ void msp_init(void) {
     // ------------------------------------------------------------
     // PPD42
 
-    P1REN  =  BIT2;
-    P1SEL  =  BIT2; // peripheral function
+    P1REN |=  BIT2;
+    P1SEL |=  BIT2; // peripheral function
     P1IFG  =  0;
-    P1IES  =  BIT2; // interrupt on 1->0
-    P1DIR  =  BIT2;
+    P1IES |=  BIT2; // interrupt on 1->0
+    P1DIR |=  BIT2;
     //!@todo ISR
     //P1IE   =  BIT2;
 
