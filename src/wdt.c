@@ -7,16 +7,16 @@
 
 /** Stops the watchdog */
 void wdt_stop(void) {
-	WDTCTL = WDTPW | WDTHOLD;
-    SFRIE1 &= ~WDTIE;
+  WDTCTL = WDTPW | WDTHOLD;
+  SFRIE1 &= ~WDTIE;
 }
 
 /** Starts the watchdog timer in WDT mode in 1 second interval*/
 void wdt_start(void) {
-	// WDT in watchdog mode, sourced from ACLK, 32768 divider
-	// 1 second interval
-	WDTCTL = WDT_WDT_CONFIG;
-    SFRIE1 &= ~WDTIE;
+  // WDT in watchdog mode, sourced from ACLK, 32768 divider
+  // 1 second interval
+  WDTCTL = WDT_WDT_CONFIG;
+  SFRIE1 &= ~WDTIE;
 }
 
 /** This variable is used to check if the main loop
@@ -24,17 +24,17 @@ void wdt_start(void) {
  * the uC will be reset */
 volatile uint16_t wdt_counter = 0;
 void wdt_as_safe_timer(void) {
-    WDTCTL = WDT_TIMER_CONFIG;
-    SFRIE1 |= WDTIE;
+  WDTCTL = WDT_TIMER_CONFIG;
+  SFRIE1 |= WDTIE;
 }
 
 #ifndef interrupt
 #define interrupt(x) void __attribute__((interrupt (x)))
 #endif
 interrupt(WDT_VECTOR) WDT_ISR() {
-    if(wdt_counter++ > WDT_MAX_COUNTER) {
-        // Writing a value to WDTCL with no
-        // password causes a reset
-        WDTCTL = 0;
-    }
+  if(wdt_counter++ > WDT_MAX_COUNTER) {
+    // Writing a value to WDTCL with no
+    // password causes a reset
+    WDTCTL = 0;
+  }
 }

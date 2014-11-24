@@ -44,19 +44,19 @@ void usb_printf_init(void) {
 }
 
 void init_clock(void) {
-    //enable XT2 pins for F5529
+    // enable XT2 pins for F5529
     P5SEL |= 0x0C;
 
-    //use REFO for FLL and ACLK
-    UCSCTL3 = (UCSCTL3 & ~(SELREF_7)) | (SELREF__REFOCLK);
-    UCSCTL4 = (UCSCTL4 & ~(SELA_7)) | (SELA__REFOCLK);
+    // use XT2 for FLL source
+    UCSCTL3 = SELREF__XT2CLK;
 
-    //MCLK will be driven by the FLL (not by XT2), referenced to the REFO
-    //Start the FLL, at the freq indicated by the config
-    //constant USB_MCLK_FREQ
-    //Init_FLL_Settle(USB_MCLK_FREQ / 1000, USB_MCLK_FREQ / 32768);   
-    //Start the "USB crystal"
-    XT2_Start(XT2DRIVE_0);                                          
+    // use XT1 for ACLK, DCOCLKDIV for SMCLK and DCOCLK for MCLK
+    UCSCTL4 = SELA__XT1CLK | SELS__DCOCLKDIV | SELM__DCOCLK;
+
+    //Start the USB crystal (XT2)
+    XT2_Start(XT2DRIVE_0);
+
+    Init_FLL_Settle(16000, 4);
 }
 
 extern volatile BYTE bCDCDataReceived_event;   
