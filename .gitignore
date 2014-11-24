@@ -15,3 +15,7 @@ bin/
 *.md5
 build/
 MSP430_USB_DevelopersPackage_3_20_02/
+*~
+TAGS
+html
+elf
