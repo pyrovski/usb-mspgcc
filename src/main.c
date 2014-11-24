@@ -40,6 +40,18 @@ volatile uint16_t last_conv = 0;
 volatile uint8_t new_adc = 0;
 volatile uint16_t last_adc_iv = 0;
 
+union {
+  volatile struct {
+    int ta0_0:1;
+    int adc  :1;
+    int ta0_1:1;
+    int p1_2 :1;
+  } ISR_bits;
+  int ISR_int;
+} ISR_union;
+
+volatile int p1_2_count = 0;
+
 // Function declarations
 void msp_init(void);
 uint8_t events_available(void);
@@ -84,6 +96,30 @@ __interrupt void ADC_ISR(void){
     last_conv = ADC12MEM0;
     new_adc = 1;
   }
+  ISR_union.ISR_bits.adc = 1;
+}
+
+// 0xFFEA, TA0CCR0 CCIFG0
+#pragma vector=TIMER0_A0_VECTOR
+__interrupt void TA0_ISR_0(void){
+  ISR_union.ISR_bits.ta0_0 = 1;
+}
+
+#pragma vector=TIMER0_A1_VECTOR
+// 0xFFEA, TA0CCR1 CCIFG1 to TA0CCR4 CCIFG4, TA0IFG (TA0IV)
+__interrupt void TA0_ISR_1(void){
+  ISR_union.ISR_bits.ta0_1 = 1;
+}
+
+#pragma vector=PORT1_VECTOR
+__interrupt void PORT1_ISR(void){
+  volatile int IV = P1IV;
+  ISR_union.ISR_bits.p1_2 = 1;
+  //P1IES ^= BIT2; // change edge interrupt direction
+  p1_2_count++;
+  //DEBUG("P1.2 event!\r\n");
+  P1OUT ^= BIT0;
+  
 }
 
 /** Initializes modules and pins */
@@ -186,28 +222,28 @@ void msp_init(void) {
     */
 
     // ------------------------------------------------------------
-    // SMCLK divider: 16 -> 1 MHz
-    UCSCTL5 = (UCSCTL5 & ~DIVS_7) | DIVS__16;
+    // SMCLK divider: 4 -> 1 MHz
+    UCSCTL5 = (UCSCTL5 & ~DIVS_7) | DIVS__4;
 
     // ------------------------------------------------------------
     // PPD42
 
     P1REN |=  BIT2;
-    P1SEL |=  BIT2; // peripheral function
+    //P1SEL |=  BIT2; // peripheral function
+    P1SEL &= ~BIT2; // port function
     P1IFG  =  0;
     P1IES |=  BIT2; // interrupt on 1->0
-    P1DIR |=  BIT2;
-    //!@todo ISR
-    //P1IE   =  BIT2;
+    P1DIR &= ~BIT2; // input
+    P1IE   =  BIT2;
 
     // SMCLK is 1 MHz, so SMCLK/8 = 125 kHz, or 8 us period
-    TA0CTL  = TASSEL__SMCLK | ID__8 | MC__CONTINUOUS;
-    TA0CCTL0 = CM_3 | CCIS_1 | SCS | SCCI | CAP;
-    TA0EX0 = TAIDEX_3; // further divide by 4 -> 31.250 kHz, or 32 us period 
+    /* TA0CTL  = TASSEL__SMCLK | ID__8 | MC__CONTINUOUS; */
+    /* TA0CCTL0 = CM_3 | CCIS_1 | SCS | SCCI | CAP; */
+    /* TA0EX0 = TAIDEX_3; // further divide by 4 -> 31.250 kHz, or 32 us period  */
     
-    //!@todo ISR
-    //TA0CTL |= TAIE;
-    //TA0CCTL0 |= CCIE;
+    /* //!@todo ISR */
+    /* //TA0CTL |= TAIE; */
+    /* TA0CCTL0 |= CCIE; */
 
     // ------------------------------------------------------------
     // AM2302
@@ -216,7 +252,7 @@ void msp_init(void) {
     P2SEL ^= ~BIT0; // IO function
     P2IFG  =  0;
     P2IES  =  BIT0; // interrupt on 1->0
-    P2DIR  =  BIT0;
+    P2DIR  =  BIT0; // output
     //!@todo ISR
     //P2IE   =  BIT0;
 
