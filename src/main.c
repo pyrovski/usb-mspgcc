@@ -33,24 +33,7 @@
 #include <stdint.h>
 
 #include "usb_printf.h"
-
-//Indicates data has been received without an open rcv operation
-volatile BYTE bCDCDataReceived_event = FALSE;
-volatile uint16_t last_conv = 0;
-volatile uint8_t new_adc = 0;
-volatile uint16_t last_adc_iv = 0;
-
-union {
-  volatile struct {
-    int ta0_0:1;
-    int adc  :1;
-    int ta0_1:1;
-    int p1_2 :1;
-  } ISR_bits;
-  int ISR_int;
-} ISR_union;
-
-volatile int p1_2_count = 0;
+#include "globals.h"
 
 // Function declarations
 void msp_init(void);
@@ -76,14 +59,23 @@ int main(void) {
     msp_init();
 
     DEBUG("Running\r\n");
-
+    
     // Main loop
     while(1) {  
-        // Check if there are events available. If there are
-        // then we process them
-        if(events_available()) {
-            process_events();
-        }
+      // Check if there are events available. If there are
+      // then we process them
+      if(ISR_union.ISR_bits.ta0_ccr1 && PPD42_state){
+	DEBUG("ccr1:x%x, ta0_ov:%d\r\n", 
+	      last_ta0_ccr1, ta0_overflow_counter);
+      }
+      if(ISR_union.ISR_bits.ta0_if){
+	//DEBUG("tA0 overflow\r\n");
+      }
+      if(ISR_union.ISR_int)
+	ISR_union.ISR_int = 0;
+      if(events_available()) {
+	process_events();
+      }
     }
 }
 
@@ -102,13 +94,28 @@ __interrupt void ADC_ISR(void){
 // 0xFFEA, TA0CCR0 CCIFG0
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void TA0_ISR_0(void){
+
+  // we don't have to reset any interrupt flags here
   ISR_union.ISR_bits.ta0_0 = 1;
 }
 
 #pragma vector=TIMER0_A1_VECTOR
 // 0xFFEA, TA0CCR1 CCIFG1 to TA0CCR4 CCIFG4, TA0IFG (TA0IV)
 __interrupt void TA0_ISR_1(void){
-  ISR_union.ISR_bits.ta0_1 = 1;
+  volatile uint16_t IV = TA0IV;
+  if(IV == TA0IV_TA0CCR1){
+    last_ta0_ccr1 = TA0CCR1;
+    ISR_union.ISR_bits.ta0_ccr1 = 1;
+    p1_2_count++;
+    P1OUT ^= BIT0;
+    PPD42_state = !!(TA0CCTL1 & CCI);
+    if(!PPD42_state)
+      ta0_overflow_counter = 0;
+  }else if(IV == TA0IV_TA0IFG){
+    ISR_union.ISR_bits.ta0_if = 1;
+    if(!PPD42_state)
+      ta0_overflow_counter++;
+  }
 }
 
 #pragma vector=PORT1_VECTOR
@@ -229,21 +236,22 @@ void msp_init(void) {
     // PPD42
 
     P1REN |=  BIT2;
-    //P1SEL |=  BIT2; // peripheral function
-    P1SEL &= ~BIT2; // port function
-    P1IFG  =  0;
-    P1IES |=  BIT2; // interrupt on 1->0
+    P1SEL |=  BIT2; // peripheral function
+    //P1SEL &= ~BIT2; // port function
+    //P1IFG  =  0;
+    //P1IES |=  BIT2; // interrupt on 1->0
     P1DIR &= ~BIT2; // input
-    P1IE   =  BIT2;
+    //P1IE   =  BIT2;
 
     // SMCLK is 1 MHz, so SMCLK/8 = 125 kHz, or 8 us period
-    /* TA0CTL  = TASSEL__SMCLK | ID__8 | MC__CONTINUOUS; */
-    /* TA0CCTL0 = CM_3 | CCIS_1 | SCS | SCCI | CAP; */
-    /* TA0EX0 = TAIDEX_3; // further divide by 4 -> 31.250 kHz, or 32 us period  */
+    TA0CTL  = TASSEL__SMCLK | ID__8 | MC__CONTINUOUS;
+    TA0CCTL1 = CM_3 | CCIS_0 | SCS | SCCI | CAP;
+    // further divide by 4 -> 31.250 kHz, or 32 us period, 2.097152s
+    // overflow period
+    TA0EX0 = TAIDEX_3;
     
-    /* //!@todo ISR */
-    /* //TA0CTL |= TAIE; */
-    /* TA0CCTL0 |= CCIE; */
+    TA0CTL |= TAIE;
+    TA0CCTL1 |= CCIE;
 
     // ------------------------------------------------------------
     // AM2302
