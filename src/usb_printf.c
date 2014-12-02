@@ -92,5 +92,9 @@ void usb_receive_string(void) {
       if(msg[0] == 'p'){
       	DEBUG("Transition count: %d\r\n", p1_2_count);
       }
+      if(msg[0] == 'l'){
+	DEBUG("avg up:%lu, avg dn:%lu\r\n", 
+	      avg_PPD_up_ticks, avg_PPD_down_ticks);
+      }
     }
 }

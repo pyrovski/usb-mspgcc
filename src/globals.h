@@ -14,13 +14,15 @@ typedef union {
     int ta0_if  :1;
     int p1_2    :1;
   } ISR_bits;
-  int ISR_int;
+  volatile int ISR_int;
 } ISR_u;
 
-extern ISR_u ISR_union;
+extern volatile ISR_u ISR_union;
 
 extern volatile int p1_2_count;
-extern volatile uint16_t last_ta0_ccr1;
+extern volatile uint16_t ta0_PPD_down, ta0_PPD_up;
+#define PPD_avg_period_p2 3
+extern volatile uint32_t avg_PPD_up_ticks, avg_PPD_down_ticks;
 extern volatile uint8_t PPD42_state;
 extern volatile uint8_t ta0_overflow_counter;
 #endif
