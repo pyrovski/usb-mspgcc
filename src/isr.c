@@ -31,16 +31,17 @@ __interrupt void TA0_ISR_1(void){
 
     if(!PPD42_state){
       ta0_PPD_down = TA0CCR1;
-      int32_t PPD_up_ticks = ((int32_t)(ta0_PPD_down - ta0_PPD_up) + 
-			      ((int32_t)ta0_overflow_counter << (int32_t)16)) ;
-      avg_PPD_up_ticks = ((avg_PPD_up_ticks << PPD_avg_period_p2) - 
-			  avg_PPD_up_ticks + PPD_up_ticks) >> PPD_avg_period_p2;
     } else {
-      ta0_PPD_up = TA0CCR1;
-      int32_t PPD_down_ticks = ((int32_t)(ta0_PPD_up - ta0_PPD_down) + 
+      uint16_t up = TA0CCR1;
+      int32_t PPD_down_ticks = ((int32_t)(up - ta0_PPD_down) + 
 				((int32_t)ta0_overflow_counter << (int32_t)16));
       avg_PPD_down_ticks = ((avg_PPD_down_ticks << PPD_avg_period_p2) - 
 			    avg_PPD_down_ticks + PPD_down_ticks) >> PPD_avg_period_p2;
+      int32_t PPD_period_ticks = ((int32_t)(up - ta0_PPD_up) + 
+			      ((int32_t)ta0_overflow_counter << (int32_t)16)) ;
+      avg_PPD_period_ticks = ((avg_PPD_period_ticks << PPD_avg_period_p2) - 
+			      avg_PPD_period_ticks + PPD_period_ticks) >> PPD_avg_period_p2;
+      ta0_PPD_up = up;
     }
 
     ta0_overflow_counter = 0;
