@@ -178,7 +178,7 @@ void msp_init(void) {
 
        AM2302: set TA1.1 to capture and interrupt on 1->0, then
        0->1. Track protocol state. Start measurement transmission
-       every 2s by accumulating TA1 overflow events. Timer A1 should
+       every 2s by tracking TA0 overflow events. Timer A1 should
        have a period of ~1us. Pin P2.0 must transition between input
        and output, so careful transfer of control is required.
     */
@@ -214,23 +214,22 @@ void msp_init(void) {
     P2REN  =  BIT0;
     P2SEL ^= ~BIT0; // IO function
     P2IFG  =  0;
-    P2IES  =  BIT0; // interrupt on 1->0
-    P2DIR  =  BIT0; // output
+    //P2IES  =  BIT0; // interrupt on 1->0
+    P2DIR |=  BIT0; // output
     //!@todo ISR
     //P2IE   =  BIT0;
 
-    TA1CTL = TASSEL__SMCLK | ID__1 | MC__CONTINUOUS; // 1 MHz
-    TA1CCTL0 = CM_3 | CCIS_0 | SCS | SCCI | CAP;
+    TA1CTL = TASSEL__SMCLK | ID__1 | MC__CONTINUOUS; // 1 MHz, overflow in 65.536 ms
+    TA1CCTL1 = CM_3 | CCIS_0 | SCS | SCCI | CAP;
 
-    //!@todo ISR
-    //TA1CTL |= TAIE;
-    //TA1CCTL0 |= CCIE;
+    TA1CTL |= TAIE;
+    TA1CCTL1 |= CCIE;
 
-    // ------------------------------------------------------------
+    // ----------------------------------------------------
     // Enable global interrupts
     __enable_interrupt();
 
-    // ------------------------------------------------------------
+    // ----------------------------------------------------
     // start conversion
     ADC12CTL0 |= ADC12ENC | ADC12SC;
 }

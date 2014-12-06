@@ -14,3 +14,5 @@ volatile uint16_t ta0_PPD_down = 0, ta0_PPD_up = 0;
 volatile uint8_t PPD42_state = 1;
 volatile uint8_t ta0_overflow_counter = 0;
 volatile uint32_t avg_PPD_period_ticks = 0, avg_PPD_down_ticks = 0;
+
+volatile am2302_state_s am2302_state;

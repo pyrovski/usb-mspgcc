@@ -1,5 +1,6 @@
 #include "usb_printf.h"
 #include "globals.h"
+#include "am2302.h"
 
 void init_ports(void);
 void init_clock(void);
@@ -76,25 +77,26 @@ void usb_receive_string(void) {
         CDC0_INTFNUM);                                                         
     msg[msg_len] = 0;
     bCDCDataReceived_event = FALSE;
-    if(strncmp(msg, "shell", 5) == 0) {
-        DEBUG("Entering shell\r\n");
-        console();
-    } else {
-      DEBUG("USB l=%d: %s\r\n", msg_len, msg);
-      if(ISR_union.ISR_int){
-	DEBUG("ISR: 0x%x\r\n", ISR_union.ISR_int);
-	ISR_union.ISR_int = 0;
-      }
-      if(new_adc){
-	DEBUG(", t=0x%04x, iv=0x%04x\r\n", last_conv, last_adc_iv);
-	new_adc = 0;
-      }
-      if(msg[0] == 'p'){
-      	DEBUG("Transition count: %d\r\n", p1_2_count);
-      }
-      if(msg[0] == 'l'){
-	DEBUG("avg per:%lu, avg dn:%lu\r\n", 
-	      avg_PPD_period_ticks, avg_PPD_down_ticks);
+    DEBUG("USB l=%d: %s\r\n", msg_len, msg);
+    if(ISR_union.ISR_int){
+      DEBUG("ISR: 0x%x\r\n", ISR_union.ISR_int);
+      ISR_union.ISR_int = 0;
+    }
+    if(new_adc){
+      DEBUG("t=0x%04x, iv=0x%04x\r\n", last_conv, last_adc_iv);
+      new_adc = 0;
+    }
+    if(msg[0] == 'p'){
+      DEBUG("Transition count: %d\r\n", p1_2_count);
+    } else if(msg[0] == 'l'){
+      DEBUG("avg per:%lu, avg dn:%lu\r\n", 
+	    avg_PPD_period_ticks, avg_PPD_down_ticks);
+    } else if(msg[0] == 'a'){
+      if(am2302_state.phase == 0){
+	DEBUG("start am2302 transfer\r\n");
+	am2302Start();
+      } else {
+	DEBUG("am2302 busy: %d\r\n", am2302_state.phase);
       }
     }
 }
