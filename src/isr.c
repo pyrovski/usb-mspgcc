@@ -90,8 +90,6 @@ __interrupt void TA1_ISR_1(void){
     }
     uint16_t ta1_capture = TA1CCR1;
 
-    if(am2302_state.error)
-      am2302_state.phase = 8;
     am2302_state.timing[am2302_state.phase] = ta1_capture;
 
     switch(am2302_state.phase){
@@ -107,88 +105,19 @@ __interrupt void TA1_ISR_1(void){
 	am2302_error(am2302_expLow);
       }
       break;
-    case 2: // host wait high 20-40us done; pulled down
-      if(!am2302_state.level){
-	// device triggered low
-	//!@todo prevTA1R should be 20-40+
-	am2302_state.phase = 3;
-      } else { // high
-	am2302_error(am2302_expLow);
-      }
-      break;
-    case 3: // sensor low 80us done
-      if(am2302_state.level){
-	// device triggered high
-	//!@todo prevTA1R should be 80+
-	am2302_state.phase = 4;
-      } else { // low
-	am2302_error(am2302_expHigh);
-      }
-      break;
-    case 4: // sensor high 80us done
-      if(!am2302_state.level){
-	// device triggered low
-	//!@todo prevTA1R should be 80+
-	am2302_state.phase = 5;
-      } else { // high
-	am2302_error(am2302_expLow);
-      }
-      break;
-    case 5: // data
-      if(!am2302_state.level){
-	// device triggered low
-	//!@todo prevTA1R should be 80+
-	if(am2302_state.bit < 40){ // not done with data yet
-	  am2302_state.phase = 5;
-	} else { // done with data bits
-	  am2302_state.phase = 6;
-	  //!@todo verify checksum
-	  am2302_state.newData = 1;
-	}
-      } else { // time for 1 (70us) or 0 (26-28us)
-	//!@todo if < 20, error
-	if(TA1CCR1 < 30){        // 0 bit
-	} else if(TA1CCR1 > 60){ // 1 bit
-	  am2302_state.data |= ((uint64_t)1 << am2302_state.bit);
-	} //!@todo if >= 80, error
-	am2302_state.bit++;
-      }
-      break;
-    case 6: // sensor low
-      // bring high again; start 2s wait
-      //!@todo do we need a wait phase here?
-      am2302OutHigh(); // does not enable CCIE
-      am2302_state.phase = 7;
-      break;
-    case 7: // 2s wait; error
-      am2302_error(am2302_unexpInput);
-      break;
-    case 8: // fault
-      break;
     default:
-      am2302_error(am2302_defPhase);
+      am2302_state.phase++;
       break;
     }
+    if(am2302_state.phase >= 85)
+      am2302_error(am2302_noError);
+      
     am2302_state.ta1_overflows = 0;
     ISR_union.ISR_bits.ta1_ccr1 = 1;
     TA1CCTL1 |= CCIE;
   } else if(IV == TA1IV_TA1IFG){
     ISR_union.ISR_bits.ta1_if = 1;
     am2302_state.ta1_overflows++;
-    switch(am2302_state.phase){
-    case 7:
-      if(am2302_state.ta1_overflows >= 31){
-	am2302_state.ta1_overflows = 0;
-	am2302_state.phase = 0;
-      }
-      break;
-    case 0:
-      break;
-    default:
-      // we should never see an overflow in states other than 0 or 7.
-      am2302_error(am2302_unexpOverflow);
-      break;
-    }
   }
 }
 

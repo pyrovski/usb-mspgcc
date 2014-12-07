@@ -14,7 +14,7 @@ typedef struct {
     phase 7: 2s wait
    */
   
-  volatile uint8_t  phase        :4 ;
+  volatile uint8_t  phase        :7 ;
   volatile uint8_t  bit          :6 ;
   union {
     volatile struct {
@@ -31,7 +31,8 @@ typedef struct {
   volatile uint8_t  errorCode    :3 ;
   volatile uint8_t  errorPhase   :4 ;
 
-  volatile uint16_t timing[9];
+  volatile uint16_t timing[86];
+  volatile uint8_t dbit;
 
 } am2302_state_s;
 

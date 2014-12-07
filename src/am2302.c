@@ -14,7 +14,7 @@ void am2302_dump(am2302_state_s *st){
 	st->phase, st->errorPhase, st->error, st->errorCode);
   int i;
   DEBUG("am2302 timing: ");
-  for(i = 0; i < 9; i++)
+  for(i = 0; i < 86; i++)
     DEBUG("%d:%u\t", i, st->timing[i]);
   DEBUG("\r\n");
 }
