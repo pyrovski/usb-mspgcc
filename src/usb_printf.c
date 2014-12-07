@@ -67,7 +67,6 @@ void init_clock(void) {
     P1OUT |= BIT0;
 }
 
-extern volatile BYTE bCDCDataReceived_event;   
 void usb_receive_string(void) {
     uint8_t msg_len = 0;
     char msg[MAX_STR_LENGTH];
@@ -77,11 +76,14 @@ void usb_receive_string(void) {
         CDC0_INTFNUM);                                                         
     msg[msg_len] = 0;
     bCDCDataReceived_event = FALSE;
-    DEBUG("USB l=%d: %s\r\n", msg_len, msg);
-    if(ISR_union.ISR_int){
-      DEBUG("ISR: 0x%x\r\n", ISR_union.ISR_int);
-      ISR_union.ISR_int = 0;
-    }
+    //DEBUG("USB l=%d: %s\r\n", msg_len, msg);
+    if(ISR_union.ISR_bits.ta1_ccr1)
+      DEBUG("TA1 CCR1 IF\r\n");
+
+    if(ISR_union.ISR_bits.ta1_if)
+      DEBUG("TA1 IF\r\n");
+
+    ISR_union.ISR_int = 0;
     if(new_adc){
       DEBUG("t=0x%04x, iv=0x%04x\r\n", last_conv, last_adc_iv);
       new_adc = 0;
@@ -89,21 +91,16 @@ void usb_receive_string(void) {
     if(msg[0] == 'p'){
       DEBUG("Transition count: %d\r\n", PPD_count);
     } else if(msg[0] == 'l'){
-      if(!PPD_new){
+      if(!PPD_new)
 	DEBUG("(old) ");
-      } else {
+      else
 	PPD_new = 0;
-      }
 
       float dutyF = 100.0f * PPD_last_10_duty;
       int dutyI = (int)dutyF;
       
       DEBUG("avg duty %%:%d.%d\r\n", dutyI, 
 	    (int)(10.0f*(dutyF - dutyI)));
-      /* DEBUG("tot:%lu O:%u",  */
-      /* 	    PPD_tot_ticks, PPD_ta0_overflow_counter); */
-      /* DEBUG(" down:%lu\r\n",  */
-      /* 	    PPD_tot_down_ticks) */
     } else if(msg[0] == 'a'){
       if(am2302_state.phase == 0){
 	DEBUG("start am2302 transfer\r\n");
@@ -111,5 +108,7 @@ void usb_receive_string(void) {
       } else {
 	DEBUG("am2302 busy: %d\r\n", am2302_state.phase);
       }
+    } else if(msg[0] == 'm'){
+      am2302_dump(&am2302_state);
     }
 }

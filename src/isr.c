@@ -72,19 +72,27 @@ __interrupt void TA0_ISR_1(void){
 // 0xFFE0 Timer1_A3 CC1-2, TA1
 __interrupt void TA1_ISR_1(void){
   volatile uint16_t IV = TA1IV;
-  uint16_t prevTA1R = TA1R;
+  uint16_t ta1_capture = TA1CCR1;
   if(IV == TA1IV_TA1CCR1){
     TA1R = 0; // reset timer A1
     am2302_state.level = !!(TA1CCTL1 & SCCI);
+    am2302_state.timing[am2302_state.phase] = ta1_capture;
+    if(am2302_state.error){
+      am2302_state.phase = 8;
+    }
     switch(am2302_state.phase){
-    case 0: // idle
-      //!@todo error
+    case 0: // idle; should not have input transitions here
+      am2302_state.error = 1;
+      am2302_state.errorCode = am2302_unexpInput;
       break;
     case 1: // host init low done; pull up
       if(!am2302_state.level){
 	am2302_state.phase = 2;
 	am2302InPullup();
 	//!@todo prevTA1R should be ~5000
+      } else { // high
+	am2302_state.error = 1;
+	am2302_state.errorCode = am2302_expLow;
       }
       break;
     case 2: // host wait high 20-40us done; pulled down
@@ -92,38 +100,47 @@ __interrupt void TA1_ISR_1(void){
 	// device triggered low
 	//!@todo prevTA1R should be 20-40+
 	am2302_state.phase = 3;
-      } //!@todo else error
+      } else { // high
+	am2302_state.error = 1;
+	am2302_state.errorCode = am2302_expLow;
+      }
       break;
     case 3: // sensor low 80us done
       if(am2302_state.level){
 	// device triggered high
 	//!@todo prevTA1R should be 80+
 	am2302_state.phase = 4;
-      } //!@todo else error
+      } else { // low
+	am2302_state.error = 1;
+	am2302_state.errorCode = am2302_expHigh;
+      }
       break;
     case 4: // sensor high 80us done
       if(!am2302_state.level){
 	// device triggered low
 	//!@todo prevTA1R should be 80+
 	am2302_state.phase = 5;
-      } //!@todo else error
+      } else { // high
+	am2302_state.error = 1;
+	am2302_state.errorCode = am2302_expLow;
+      }
       break;
     case 5: // data
       if(!am2302_state.level){
 	// device triggered low
 	//!@todo prevTA1R should be 80+
-	if(am2302_state.bit < 40){
+	if(am2302_state.bit < 40){ // not done with data yet
 	  am2302_state.phase = 5;
-	} else {
+	} else { // done with data bits
 	  am2302_state.phase = 6;
+	  //!@todo verify checksum
+	  am2302_state.newData = 1;
 	}
       } else { // time for 1 (70us) or 0 (26-28us)
 	//!@todo if < 20, error
-	if(TA1CCR1 < 30){
-	  // 0 bit
-	} else if(TA1CCR1 > 60){
-	  // 1 bit
-	  am2302_state.data |= (1 << am2302_state.bit);
+	if(TA1CCR1 < 30){        // 0 bit
+	} else if(TA1CCR1 > 60){ // 1 bit
+	  am2302_state.data |= ((uint64_t)1 << am2302_state.bit);
 	} //!@todo if >= 80, error
 	am2302_state.bit++;
       }
@@ -131,21 +148,40 @@ __interrupt void TA1_ISR_1(void){
     case 6: // sensor low
       // bring high again; start 2s wait
       //!@todo do we need a wait phase here?
-      am2302OutHigh();
+      am2302OutHigh(); // does not enable CCIE
       am2302_state.phase = 7;
-      //!@todo set a TA0 CCR to compare TA0R-1; ~2s delay.
       break;
     case 7: // 2s wait; error
+      am2302_state.error = 1;
+      am2302_state.errorCode = am2302_unexpInput;
+      break;
+    case 8: // fault
       break;
     default:
-      // error
+      am2302_state.error = 1;
+      am2302_state.errorCode = am2302_defPhase;
       break;
     }
+    am2302_state.ta1_overflows = 0;
     ISR_union.ISR_bits.ta1_ccr1 = 1;
   } else if(IV == TA1IV_TA1IFG){
     ISR_union.ISR_bits.ta1_if = 1;
-    if(am2302_state.phase != 0 && am2302_state.phase != 7){
-      //!@todo error
+    am2302_state.ta1_overflows++;
+    switch(am2302_state.phase){
+    case 7:
+      if(am2302_state.ta1_overflows >= 31){
+	am2302_state.ta1_overflows = 0;
+	am2302_state.phase = 0;
+	
+      }
+      break;
+    case 0:
+      break;
+    default:
+      // we should never see an overflow in states other than 0 or 7.
+      am2302_state.error = 1;
+      am2302_state.errorCode = am2302_unexpOverflow;
+      break;
     }
   }
 }

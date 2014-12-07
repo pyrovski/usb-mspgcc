@@ -27,7 +27,7 @@ __attribute__((critical)) int16_t usb_printf(const char * fmt, ...);
  *  only printing the output if the USB connection is present,
  *  or having different verbose levels */
 // USB debug:
-#define DEBUG(...) do {usb_printf(__VA_ARGS__);} while(0);
+#define DEBUG(...) do {usb_printf(__VA_ARGS__);} while(0)
 
 #define USB_LOCKED   2
 #define USB_ENABLED  1

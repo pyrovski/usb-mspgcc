@@ -34,6 +34,7 @@
 
 #include "usb_printf.h"
 #include "globals.h"
+#include "am2302.h"
 
 // Function declarations
 void msp_init(void);
@@ -77,6 +78,13 @@ int main(void) {
       }
       if(ISR_union.ISR_bits.ta0_if){
 	//DEBUG("tA0 overflow\r\n");
+      }
+      if(am2302_state.error){
+	am2302_state_s am2302_st = am2302_state;
+
+	am2302_clearFault();
+	DEBUG("am2302 error; phase: %d\r\n", am2302_st.phase);
+	am2302_dump(&am2302_st);
       }
       if(events_available()) {
 	process_events();
@@ -210,6 +218,8 @@ void msp_init(void) {
 
     // ------------------------------------------------------------
     // AM2302
+
+    am2302_state.phase = 0;
 
     P2REN  =  BIT0;
     P2SEL ^= ~BIT0; // IO function

@@ -1,6 +1,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 #include <stdint.h>
+#include "am2302.h"
 
 extern volatile uint8_t bCDCDataReceived_event;
 extern volatile uint16_t last_conv;
@@ -30,23 +31,6 @@ extern volatile uint8_t PPD_ta0_overflow_counter;
 extern volatile float PPD_last_10_duty;
 extern volatile uint8_t PPD_new;
 
-typedef struct {
-  /*
-    phase 0: idle (host pull-up)
-    phase 1: host initiate (1-10ms)
-    phase 2: wait for response (20-40us)
-    phase 3: sensor low (80us)
-    phase 4: sensor high (80us)
-    phase 5: data (40 bits, 78-120us per bit: 50us low, 26-28/70us high)
-    phase 6: sensor low (?us)
-    phase 7: 2s wait
-   */
-  
-  volatile uint8_t  phase;
-  volatile uint8_t  bit;
-  volatile uint64_t data;
-  volatile uint8_t  level;
-} am2302_state_s;
 extern volatile am2302_state_s am2302_state;
 
 #endif

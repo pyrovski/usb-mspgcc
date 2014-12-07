@@ -17,3 +17,5 @@ volatile float PPD_last_10_duty = 0;
 volatile uint8_t PPD_new = 0;
 
 volatile am2302_state_s am2302_state;
+
+volatile uint16_t am2302_timing[8];
