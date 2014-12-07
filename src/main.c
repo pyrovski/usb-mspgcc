@@ -212,7 +212,10 @@ void msp_init(void) {
     // further divide by 4 -> 31.250 kHz, or 32 us period, 2.097152s
     // overflow period
     TA0EX0 = TAIDEX_3;
-    
+
+    TA0CTL |=  TACLR;
+    TA0CTL &= ~TACLR;
+  
     TA0CTL |= TAIE;
     TA0CCTL1 |= CCIE;
 
@@ -231,6 +234,9 @@ void msp_init(void) {
 
     TA1CTL = TASSEL__SMCLK | ID__1 | MC__CONTINUOUS; // 1 MHz, overflow in 65.536 ms
     TA1CCTL1 = CM_3 | CCIS_0 | SCS | SCCI | CAP;
+
+    TA1CTL |=  TACLR;
+    TA1CTL &= ~TACLR;
 
     TA1CTL |= TAIE;
     TA1CCTL1 |= CCIE;

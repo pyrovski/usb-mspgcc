@@ -29,8 +29,9 @@ typedef struct {
   volatile uint8_t  newData      :1 ;
   volatile uint8_t  error        :1 ;
   volatile uint8_t  errorCode    :3 ;
+  volatile uint8_t  errorPhase   :4 ;
 
-  volatile uint16_t timing[8];
+  volatile uint16_t timing[9];
 
 } am2302_state_s;
 
@@ -40,7 +41,8 @@ typedef enum {
   am2302_expLow        = 2,
   am2302_unexpOverflow = 3,
   am2302_defPhase      = 4,
-  am2302_unexpInput    = 5
+  am2302_unexpInput    = 5,
+  am2302_cov           = 6
 } am2302_errorCode_t;
 
 void am2302_dump(am2302_state_s *);
