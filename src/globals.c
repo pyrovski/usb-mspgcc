@@ -9,10 +9,11 @@ volatile uint16_t last_adc_iv = 0;
 
 volatile ISR_u ISR_union;
 
-volatile int p1_2_count = 0;
-volatile uint16_t ta0_PPD_down = 0, ta0_PPD_up = 0;
+volatile uint8_t PPD_count = 0;
 volatile uint8_t PPD42_state = 1;
-volatile uint8_t ta0_overflow_counter = 0;
-volatile uint32_t avg_PPD_period_ticks = 0, avg_PPD_down_ticks = 0;
+volatile uint32_t PPD_tot_ticks = 0, PPD_tot_down_ticks = 0;
+volatile uint8_t PPD_ta0_overflow_counter = 0;
+volatile float PPD_last_10_duty = 0;
+volatile uint8_t PPD_new = 0;
 
 volatile am2302_state_s am2302_state;

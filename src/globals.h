@@ -22,12 +22,13 @@ typedef union {
 
 extern volatile ISR_u ISR_union;
 
-extern volatile int p1_2_count;
-extern volatile uint16_t ta0_PPD_down, ta0_PPD_up;
+extern volatile uint8_t PPD_count;
 #define PPD_avg_period_p2 3
-extern volatile uint32_t avg_PPD_period_ticks, avg_PPD_down_ticks;
+extern volatile uint32_t PPD_tot_ticks, PPD_tot_down_ticks;
 extern volatile uint8_t PPD42_state;
-extern volatile uint8_t ta0_overflow_counter;
+extern volatile uint8_t PPD_ta0_overflow_counter;
+extern volatile float PPD_last_10_duty;
+extern volatile uint8_t PPD_new;
 
 typedef struct {
   /*

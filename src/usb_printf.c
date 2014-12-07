@@ -87,10 +87,23 @@ void usb_receive_string(void) {
       new_adc = 0;
     }
     if(msg[0] == 'p'){
-      DEBUG("Transition count: %d\r\n", p1_2_count);
+      DEBUG("Transition count: %d\r\n", PPD_count);
     } else if(msg[0] == 'l'){
-      DEBUG("avg per:%lu, avg dn:%lu\r\n", 
-	    avg_PPD_period_ticks, avg_PPD_down_ticks);
+      if(!PPD_new){
+	DEBUG("(old) ");
+      } else {
+	PPD_new = 0;
+      }
+
+      float dutyF = 100.0f * PPD_last_10_duty;
+      int dutyI = (int)dutyF;
+      
+      DEBUG("avg duty %%:%d.%d\r\n", dutyI, 
+	    (int)(10.0f*(dutyF - dutyI)));
+      /* DEBUG("tot:%lu O:%u",  */
+      /* 	    PPD_tot_ticks, PPD_ta0_overflow_counter); */
+      /* DEBUG(" down:%lu\r\n",  */
+      /* 	    PPD_tot_down_ticks) */
     } else if(msg[0] == 'a'){
       if(am2302_state.phase == 0){
 	DEBUG("start am2302 transfer\r\n");

@@ -28,30 +28,35 @@ __interrupt void TA0_ISR_0(void){
 __interrupt void TA0_ISR_1(void){
   volatile uint16_t IV = TA0IV;
   if(IV == TA0IV_TA0CCR1){
+    TA0R = 0;
     PPD42_state = !!(TA0CCTL1 & SCCI);
+    
+    PPD_tot_ticks += ((uint32_t)PPD_ta0_overflow_counter << 16) + TA0CCR1;
+    PPD_ta0_overflow_counter = 0;
 
     if(!PPD42_state){
-      ta0_PPD_down = TA0CCR1;
-    } else {
+    } else { // high
       uint16_t up = TA0CCR1;
-      int32_t PPD_down_ticks = ((int32_t)(up - ta0_PPD_down) + 
-				((int32_t)ta0_overflow_counter << (int32_t)16));
-      avg_PPD_down_ticks = ((avg_PPD_down_ticks << PPD_avg_period_p2) - 
-			    avg_PPD_down_ticks + PPD_down_ticks) >> PPD_avg_period_p2;
-      int32_t PPD_period_ticks = ((int32_t)(up - ta0_PPD_up) + 
-			      ((int32_t)ta0_overflow_counter << (int32_t)16)) ;
-      avg_PPD_period_ticks = ((avg_PPD_period_ticks << PPD_avg_period_p2) - 
-			      avg_PPD_period_ticks + PPD_period_ticks) >> PPD_avg_period_p2;
-      ta0_PPD_up = up;
+      
+      PPD_tot_down_ticks += 
+	((uint32_t)PPD_ta0_overflow_counter << 16) + up;
+
+      if(PPD_count >= 10){
+	PPD_last_10_duty = ((float) PPD_tot_down_ticks)/PPD_tot_ticks;
+	PPD_tot_ticks = 0;
+	PPD_tot_down_ticks = 0;
+	PPD_count = 0;
+	PPD_new = 1;
+      } else {
+	PPD_count++;
+      }
     }
 
-    ta0_overflow_counter = 0;
-    p1_2_count++;
     P1OUT ^= BIT0;
     ISR_union.ISR_bits.ta0_ccr1 = 1;
   } else if(IV == TA0IV_TA0IFG){
     ISR_union.ISR_bits.ta0_if = 1;
-    ta0_overflow_counter++;
+    PPD_ta0_overflow_counter++;
   }
 }
 
@@ -145,12 +150,12 @@ __interrupt void TA1_ISR_1(void){
   }
 }
 
-#pragma vector=PORT1_VECTOR
-__interrupt void PORT1_ISR(void){
-  volatile int IV = P1IV;
-  ISR_union.ISR_bits.p1_2 = 1;
-  //P1IES ^= BIT2; // change edge interrupt direction
-  p1_2_count++;
-  //DEBUG("P1.2 event!\r\n");
-  P1OUT ^= BIT0;
-}
+/* #pragma vector=PORT1_VECTOR */
+/* __interrupt void PORT1_ISR(void){ */
+/*   volatile int IV = P1IV; */
+/*   ISR_union.ISR_bits.p1_2 = 1; */
+/*   //P1IES ^= BIT2; // change edge interrupt direction */
+/*   p1_2_count++; */
+/*   //DEBUG("P1.2 event!\r\n"); */
+/*   P1OUT ^= BIT0; */
+/* } */
