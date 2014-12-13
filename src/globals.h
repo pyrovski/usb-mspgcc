@@ -8,6 +8,7 @@ extern volatile uint16_t last_conv;
 extern volatile uint8_t new_adc;
 extern volatile uint16_t last_adc_iv;
 
+/*
 typedef union {
   volatile struct {
     int ta0_0   :1;
@@ -20,16 +21,21 @@ typedef union {
   } ISR_bits;
   volatile int ISR_int;
 } ISR_u;
+*/
 
-extern volatile ISR_u ISR_union;
+//extern volatile ISR_u ISR_union;
 
-extern volatile uint8_t PPD_count;
-#define PPD_avg_period_p2 3
-extern volatile uint32_t PPD_tot_ticks, PPD_tot_down_ticks;
-extern volatile uint8_t PPD42_state;
-extern volatile uint8_t PPD_ta0_overflow_counter;
-extern volatile float PPD_last_10_duty;
-extern volatile uint8_t PPD_new;
+extern volatile uint8_t  PPD42_state;
+extern volatile uint8_t  PPD_ta0_overflow_dn;
+extern volatile uint8_t  PPD_ta0_overflow_up;
+extern volatile uint8_t  PPD_new_up;
+extern volatile uint8_t  PPD_new_dn;
+extern volatile uint16_t PPD_last_up;
+extern volatile uint16_t PPD_last_dn;
+
+uint8_t PPD_count;
+uint32_t PPD_tot_ticks, PPD_tot_down_ticks;
+float PPD_last_10_duty;
 
 extern volatile am2302_state_s am2302_state;
 

@@ -35,6 +35,7 @@
 #include "usb_printf.h"
 #include "globals.h"
 #include "am2302.h"
+#include "ppd42.h"
 
 // Function declarations
 void msp_init(void);
@@ -65,26 +66,42 @@ int main(void) {
     while(1) {  
       // Check if there are events available. If there are
       // then we process them
-      if(ISR_union.ISR_bits.ta0_ccr1){
-	/* if(PPD42_state){ */
-	/*   DEBUG("dn:x%x, up:x%x, ta0_ov:%d\r\n",  */
-	/* 	ta0_PPD_down, ta0_PPD_up, ta0_overflow_counter); */
-	/*   DEBUG("dn ticks: %lu\r\n", PPD_down_ticks); */
-	/* } else { */
-	/*   DEBUG("up:x%x, dn:x%x, ta0_ov:%d\r\n",  */
-	/* 	ta0_PPD_up, ta0_PPD_down, ta0_overflow_counter); */
-	/*   DEBUG("up ticks: %lu\r\n", PPD_up_ticks); */
-	/* } */
-      }
-      if(ISR_union.ISR_bits.ta0_if){
-	//DEBUG("tA0 overflow\r\n");
+      if(PPD_new_up){ // new up
+	PPD_new_up = 0;
+	uint32_t down_ticks = ((uint32_t)PPD_ta0_overflow_dn << 16) + PPD_last_dn;
+	PPD_ta0_overflow_dn = 0;
+	PPD_tot_ticks += down_ticks;
+	PPD_tot_down_ticks += down_ticks;
+
+	//DEBUG("PPD last down: %lu\r\n", down_ticks);
+
+	PPD_count++;
+	if(PPD_count >= 10){
+	  PPD_last_10_duty = ((float) PPD_tot_down_ticks)/PPD_tot_ticks;
+
+	  PPD_print_last();
+
+	  PPD_count = 0;
+	  PPD_tot_ticks = 0;
+	  PPD_tot_down_ticks = 0;
+	}
+      } 
+      if(PPD_new_dn){ // new down
+	PPD_new_dn = 0;
+	uint32_t up_ticks = ((uint32_t)PPD_ta0_overflow_up << 16) + PPD_last_up;
+	PPD_ta0_overflow_up = 0;
+	PPD_tot_ticks += up_ticks;
+
+	//DEBUG("PPD last up: %lu\r\n", up_ticks);
       }
       if(am2302_state.error){
-	am2302_state_s am2302_st = am2302_state;
-
 	am2302_clearFault();
-	DEBUG("am2302 error; phase: %d\r\n", am2302_st.phase);
-	am2302_dump(&am2302_st);
+	DEBUG("am2302 error\r\n");
+	am2302_dump();
+      }
+      if(am2302_state.reset){
+	am2302_state.reset = 0;
+	DEBUG("am2302 ready\r\n");
       }
       if(events_available()) {
 	process_events();
@@ -128,8 +145,8 @@ void msp_init(void) {
       ADC12INCH_10     | // select temperature diode
       //ADC12INCH_11     | // select (Vcc - Vss)/2
       ADC12SREF_1      ; // VREF+/AVSS
-    ADC12IE = 
-      ADC12IE0         ; // enable interrupt on ADC12 mem 0 result
+    //ADC12IE = 
+      //ADC12IE0         ; // enable interrupt on ADC12 mem 0 result
 
     /* 
        ------------------------------------------------------------
@@ -213,9 +230,6 @@ void msp_init(void) {
     // overflow period
     TA0EX0 = TAIDEX_3;
 
-    TA0CTL |=  TACLR;
-    TA0CTL &= ~TACLR;
-  
     TA0CTL |= TAIE;
     TA0CCTL1 |= CCIE;
 

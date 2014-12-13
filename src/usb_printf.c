@@ -1,6 +1,7 @@
 #include "usb_printf.h"
 #include "globals.h"
 #include "am2302.h"
+#include "ppd42.h"
 
 void init_ports(void);
 void init_clock(void);
@@ -77,13 +78,6 @@ void usb_receive_string(void) {
     msg[msg_len] = 0;
     bCDCDataReceived_event = FALSE;
     //DEBUG("USB l=%d: %s\r\n", msg_len, msg);
-    if(ISR_union.ISR_bits.ta1_ccr1)
-      DEBUG("TA1 CCR1 IF\r\n");
-
-    if(ISR_union.ISR_bits.ta1_if)
-      DEBUG("TA1 IF\r\n");
-
-    ISR_union.ISR_int = 0;
     if(new_adc){
       DEBUG("t=0x%04x, iv=0x%04x\r\n", last_conv, last_adc_iv);
       new_adc = 0;
@@ -91,16 +85,7 @@ void usb_receive_string(void) {
     if(msg[0] == 'p'){
       DEBUG("Transition count: %d\r\n", PPD_count);
     } else if(msg[0] == 'l'){
-      if(!PPD_new)
-	DEBUG("(old) ");
-      else
-	PPD_new = 0;
-
-      float dutyF = 100.0f * PPD_last_10_duty;
-      int dutyI = (int)dutyF;
-      
-      DEBUG("avg duty %%:%d.%d\r\n", dutyI, 
-	    (int)(10.0f*(dutyF - dutyI)));
+      PPD_print_last();
     } else if(msg[0] == 'a'){
       if(am2302_state.phase == 0){
 	DEBUG("start am2302 transfer\r\n");

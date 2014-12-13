@@ -14,24 +14,26 @@ typedef struct {
     phase 7: 2s wait
    */
   
-  volatile uint8_t  phase        :7 ;
-  volatile uint8_t  bit          :6 ;
+  volatile int8_t   phase;
+  volatile uint8_t  errorPhase;
+  volatile uint8_t  bit         :6 ;
   union {
     volatile struct {
       volatile int16_t  temperature;
       volatile uint16_t relativeHumidity;
       volatile uint8_t  checksum;
     };
-    volatile uint64_t data         :40;
+    volatile uint64_t data       :40;
   };
   volatile uint8_t  level        :1 ;
   volatile uint8_t  ta1_overflows:6 ;
   volatile uint8_t  newData      :1 ;
+  volatile uint8_t  reset        :1 ;
   volatile uint8_t  error        :1 ;
   volatile uint8_t  errorCode    :3 ;
-  volatile uint8_t  errorPhase   :4 ;
 
-  volatile uint16_t timing[86];
+  volatile uint16_t timing[100];
+  volatile uint16_t last_ta1;
   volatile uint8_t dbit;
 
 } am2302_state_s;
@@ -43,10 +45,11 @@ typedef enum {
   am2302_unexpOverflow = 3,
   am2302_defPhase      = 4,
   am2302_unexpInput    = 5,
-  am2302_cov           = 6
+  am2302_cov           = 6,
+  am2302_tooManyTrans  = 7
 } am2302_errorCode_t;
 
-void am2302_dump(am2302_state_s *);
+void am2302_dump();
 void am2302Low();
 void am2302InPullup();
 void am2302OutHigh();
