@@ -90,6 +90,38 @@ void usb_receive_string(void) {
       if(am2302_state.phase == 0){
 	DEBUG("start am2302 transfer\r\n");
 	am2302Start();
+	__disable_interrupt();
+	while(am2302_state.phase > 0){
+	  while(!(TA1CCTL1 & CCIFG) && !(TA1CTL & TAIFG));
+	  if(TA1CCTL1 & CCIFG){
+	    uint16_t ta1_capture = TA1CCR1;
+	    TA1CCTL1 &= ~CCIFG;
+	    am2302_event(ta1_capture);
+	  } else if(TA1CTL & TAIFG){
+	    TA1CTL &= ~TAIFG;
+	    am2302_overflowEvent();
+	  }
+	}
+	__enable_interrupt();
+	if(am2302_state.error){
+	  am2302_clearFault();
+	  while(!am2302_state.reset){
+	    while(!(TA1CTL & TAIFG));
+	    am2302_overflowEvent();
+	  }
+	  am2302_state.reset = 0;
+	  DEBUG("am2302 error\r\n");
+	}
+	am2302_dump(&am2302_state);
+	if(!am2302_state.error && am2302_state.phase == -1){
+	  // normal read
+	  while(!am2302_state.reset){
+	    while(!(TA1CTL & TAIFG));
+	    am2302_overflowEvent();
+	  }
+	  am2302_state.reset = 0;
+	  DEBUG("am2302 ready\r\n");
+	}
       } else {
 	DEBUG("am2302 busy: %d\r\n", am2302_state.phase);
       }

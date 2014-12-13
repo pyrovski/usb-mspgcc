@@ -252,8 +252,8 @@ void msp_init(void) {
     TA1CTL |=  TACLR;
     TA1CTL &= ~TACLR;
 
-    TA1CTL |= TAIE;
-    TA1CCTL1 |= CCIE;
+    //TA1CTL |= TAIE;
+    //TA1CCTL1 |= CCIE;
 
     // ----------------------------------------------------
     // Enable global interrupts
