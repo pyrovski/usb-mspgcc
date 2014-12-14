@@ -59,10 +59,10 @@ void am2302OutHigh(){
 }
 
 void am2302Start(){
-  //TA1CTL   &= ~TAIE;
-  //TA1CCTL1 &= ~CCIE;
-  TA1CCTL1 &= ~CAP; // compare mode
-  TA1CCTL1 &= ~COV; // clear capture overflow
+  TA1CTL   &= ~TAIE;
+  // compare mode
+  // clear capture overflow
+  TA1CCTL1 &= ~(CCIE | CAP | COV);
 
   am2302_state.phase     = 1;
   am2302_state.bit       = 0;
@@ -112,7 +112,7 @@ void am2302_clearFault(){
   
   am2302_state.ta1_overflows = 0;
   am2302_state.error = 0;
-  //TA1CTL   |= TAIE;
+  TA1CTL |= TAIE;
 }
 
 void am2302_event(const uint16_t ta1_capture){
@@ -175,4 +175,86 @@ void am2302_error(uint8_t code){
   am2302_state.errorPhase = am2302_state.phase;
   am2302_state.ta1_overflows = 0;
   am2302OutHigh();
+}
+
+void am2302Finish(){
+  uint16_t ta1_capture = 0;
+  while(am2302_state.phase > 0){
+    uint8_t newPhase = am2302_state.phase;
+    switch(am2302_state.phase){
+    case -1: // wait
+      break;
+    case 0:
+      return;
+    case 1:
+      // wait for compare
+      while(!(TA1CCTL1 & CCIFG) && !(TA1CTL & TAIFG));
+      if(TA1CCTL1 & CCIFG){
+	ta1_capture = TA1CCR1;
+
+	TA1CTL   &= ~(MC0 | MC1);
+	TA1CCTL1 |=  CAP; // enable capture
+	TA1CTL   |=  TACLR;
+
+	P2REN    |=  BIT0;  // enable pullup
+	P2DIR    &= ~BIT0;  // input
+	P2OUT    |=  BIT0;  // P2.0 = high
+	P2SEL    |=  BIT0; // Peripheral function
+	      
+	am2302_state.ta1_overflows = 0;
+	__disable_interrupt();
+	TA1CTL   |=  MC__CONTINUOUS;
+	TA1CCTL1 &= ~CCIFG;
+	uint16_t dummy_capture = TA1CCR1;
+	am2302_state.last_ta1 = 0;
+	newPhase++;
+      } else if(TA1CTL & TAIFG){ // this should never happen
+	TA1CTL &= ~TAIFG;
+	newPhase = -1;
+	am2302_error(am2302_unexpOverflow);
+      }
+      break;
+    /* case 5: */
+    /*   break; */
+    default:
+      while(!(TA1CCTL1 & CCIFG) && !(TA1CTL & TAIFG));
+      if(TA1CCTL1 & CCIFG){
+	ta1_capture = TA1CCR1;
+	TA1CCTL1 &= ~CCIFG;
+	if(!ta1_capture) continue;
+	newPhase++;
+      } else if(TA1CTL & TAIFG){ // this should never happen
+	TA1CTL &= ~TAIFG;
+	newPhase = -1;
+	am2302_error(am2302_unexpOverflow);
+      }
+      break;
+    }
+    am2302_state.timing[am2302_state.phase] = 
+      ta1_capture - am2302_state.last_ta1;
+    am2302_state.last_ta1 = ta1_capture;
+    if(newPhase >= 86)
+      newPhase = -1;
+    am2302_state.phase = newPhase;
+  }
+  TA1CTL |= TAIE;
+  __enable_interrupt();
+  if(am2302_state.error){
+    am2302_clearFault();
+    while(!am2302_state.reset); // wait for am2302_overflowEvent to set reset
+    am2302_state.reset = 0;
+    DEBUG("am2302 error\r\n");
+  }
+  am2302_dump(&am2302_state);
+  if(!am2302_state.error && am2302_state.phase == -1){
+    // normal read
+    am2302_state.ta1_overflows = 0;
+    while(!am2302_state.reset); // wait for am2302_overflowEvent to set reset
+    am2302_state.reset = 0;
+    DEBUG("am2302 ready\r\n");
+  } else {
+    DEBUG("am2302 err:%d phase:%d\r\n", 
+	  am2302_state.error, am2302_state.phase);
+  }
+
 }

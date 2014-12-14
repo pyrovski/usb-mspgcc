@@ -29,7 +29,7 @@ __interrupt void TA0_ISR_1(void){
   uint16_t IV = TA0IV;
   if(IV == TA0IV_TA0CCR1){
     uint16_t cap = TA0CCR1;
-    PPD42_state = !!(TA0CCTL1 & SCCI);
+    PPD42_state = (TA0CCTL1 & SCCI) >> 10;
     TA0R = 0;
     if(PPD42_state){
       PPD_new_up = 1;

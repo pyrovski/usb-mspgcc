@@ -66,6 +66,14 @@ int main(void) {
     while(1) {  
       // Check if there are events available. If there are
       // then we process them
+      if(PPD_new_dn){ // new down
+	PPD_new_dn = 0;
+	uint32_t up_ticks = ((uint32_t)PPD_ta0_overflow_up << 16) + PPD_last_up;
+	PPD_ta0_overflow_up = 0;
+	PPD_tot_ticks += up_ticks;
+
+	//DEBUG("PPD last up: %lu\r\n", up_ticks);
+      }
       if(PPD_new_up){ // new up
 	PPD_new_up = 0;
 	uint32_t down_ticks = ((uint32_t)PPD_ta0_overflow_dn << 16) + PPD_last_dn;
@@ -86,14 +94,6 @@ int main(void) {
 	  PPD_tot_down_ticks = 0;
 	}
       } 
-      if(PPD_new_dn){ // new down
-	PPD_new_dn = 0;
-	uint32_t up_ticks = ((uint32_t)PPD_ta0_overflow_up << 16) + PPD_last_up;
-	PPD_ta0_overflow_up = 0;
-	PPD_tot_ticks += up_ticks;
-
-	//DEBUG("PPD last up: %lu\r\n", up_ticks);
-      }
       if(am2302_state.error){
 	am2302_clearFault();
 	DEBUG("am2302 error\r\n");

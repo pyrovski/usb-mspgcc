@@ -58,4 +58,5 @@ void am2302_clearFault();
 void am2302_event(const uint16_t ta1_capture);
 void am2302_overflowEvent();
 void am2302_error(uint8_t code);
+void am2302Finish();
 #endif
