@@ -90,17 +90,61 @@ void usb_receive_string(void) {
       if(am2302_state.phase == 0){
 	DEBUG("start am2302 transfer\r\n");
 	am2302Start();
+	//uint8_t lastState = 0;
 	__disable_interrupt();
+	uint16_t ta1_capture = 0;
 	while(am2302_state.phase > 0){
-	  while(!(TA1CCTL1 & CCIFG) && !(TA1CTL & TAIFG));
-	  if(TA1CCTL1 & CCIFG){
-	    uint16_t ta1_capture = TA1CCR1;
-	    TA1CCTL1 &= ~CCIFG;
-	    am2302_event(ta1_capture);
-	  } else if(TA1CTL & TAIFG){
-	    TA1CTL &= ~TAIFG;
-	    am2302_overflowEvent();
+	  uint8_t newPhase = am2302_state.phase;
+	  switch(am2302_state.phase){
+	  case -1: // wait
+	    break;
+	  case 0:
+	    break;
+	  case 1:
+	    // wait for compare
+	    while(!(TA1CCTL1 & CCIFG) && !(TA1CTL & TAIFG));
+	    if(TA1CCTL1 & CCIFG){
+	      ta1_capture = TA1CCR1;
+
+	      TA1CTL &= ~(MC0 | MC1);
+	      TA1CCTL1 |= CAP; // enable capture
+	      TA1CTL |=  TACLR;
+
+	      P2REN |=  BIT0;  // enable pullup
+	      P2DIR &= ~BIT0;  // input
+	      P2OUT |=  BIT0;  // P2.0 = high
+	      P2SEL |=  BIT0; // Peripheral function
+	      TA1CTL |=  MC__CONTINUOUS;
+	      TA1CCTL1 &= ~CCIFG;
+ 	      //uint16_t dummy_capture = TA1CCR1;
+	      am2302_state.last_ta1 = 0;
+	      newPhase++;
+	    } else if(TA1CTL & TAIFG){ // this should never happen
+	      TA1CTL &= ~TAIFG;
+	      newPhase = -1;
+	      am2302_error(am2302_unexpOverflow);
+	    }
+	    break;
+	  default:
+	    while(!(TA1CCTL1 & CCIFG) && !(TA1CTL & TAIFG));
+	    if(TA1CCTL1 & CCIFG){
+ 	      ta1_capture = TA1CCR1;
+	      TA1CCTL1 &= ~CCIFG;
+	      //lastState = !lastState;
+	      newPhase++;
+	    } else if(TA1CTL & TAIFG){ // this should never happen
+	      TA1CTL &= ~TAIFG;
+	      newPhase = -1;
+	      am2302_error(am2302_unexpOverflow);
+	    }
+	    break;
 	  }
+	  am2302_state.timing[am2302_state.phase] = 
+	    ta1_capture - am2302_state.last_ta1;
+	  am2302_state.last_ta1 = ta1_capture;
+	  if(newPhase >= 85)
+	    newPhase = -1;
+	  am2302_state.phase = newPhase;
 	}
 	__enable_interrupt();
 	if(am2302_state.error){

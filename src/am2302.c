@@ -29,7 +29,7 @@ void am2302_dump(){
 void am2302Low(){
   P2OUT &= ~BIT0; // P2.0 = low
   P2DIR |=  BIT0; // output
-  P2SEL ^= ~BIT0; // IO function
+  P2SEL &= ~BIT0; // IO function
 }
 
 void am2302InPullup(){
@@ -54,7 +54,7 @@ void am2302OutHigh(){
   //TA1CCTL1 &= ~CCIE;
   P2OUT |=  BIT0; // high
   P2DIR |=  BIT0; // output
-  P2SEL ^= ~BIT0; // IO function
+  P2SEL &= ~BIT0; // IO function
   // no re-enable of CCIE
 }
 
@@ -90,7 +90,7 @@ void am2302Start(){
   // Reset timer before changing compare value
 
   TA1CTL &= ~(MC0 | MC1);
-  TA1CCR1              = 10000; // 10ms
+  TA1CCR1              = 20000; // 20ms
   TA1CTL &= ~(TAIFG);
   TA1CTL |=  TACLR;
   TA1CTL |=  MC__CONTINUOUS;
@@ -173,5 +173,6 @@ void am2302_error(uint8_t code){
   am2302_state.error = 1;
   am2302_state.errorCode = code;
   am2302_state.errorPhase = am2302_state.phase;
+  am2302_state.ta1_overflows = 0;
   am2302OutHigh();
 }

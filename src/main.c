@@ -239,7 +239,7 @@ void msp_init(void) {
     am2302_state.phase = 0;
 
     P2REN  =  BIT0;
-    P2SEL ^= ~BIT0; // IO function
+    P2SEL &= ~BIT0; // IO function
     P2IFG  =  0;
     //P2IES  =  BIT0; // interrupt on 1->0
     P2DIR |=  BIT0; // output
