@@ -7,9 +7,25 @@ void am2302_dump(){
   DEBUG("am2302: ");
   if(!am2302_state.newData)
     DEBUG("(old): ");
-  DEBUG("0x%lx\r\n", am2302_state.data);
-  DEBUG("temp: %d\r\n", am2302_state.temperature);
-  DEBUG("rh: %u\r\n", am2302_state.relativeHumidity);
+  DEBUG("0x%llx\r\n", am2302_state.data);
+  uint16_t temp_c = (am2302_state.data & 0xffff00) >> 8;
+  DEBUG("temp: %u degC*10\r\n", temp_c);
+  /* DEBUG("temp: "); */
+  /* float temp_f = ((float)temp_c)/10.0f * 9.0f/5.0f + 32.0f; */
+  /* usb_printf_float(temp_f); */
+  /* DEBUG(" deg. F.\r\n"); */
+
+  /* usb_printf_float(5.6f); */
+  /* DEBUG("\r\n"); */
+
+
+  uint16_t rh = (am2302_state.data & 0xffff000000) >> 24;
+  DEBUG("rh: %d%%\r\n", rh);
+  /* float rh_f = (float)rh / 10.0f; */
+  /* DEBUG("rh: "); */
+  /* usb_printf_float(rh_f); */
+  /* DEBUG("%%\r\n"); */
+  DEBUG("checksum: 0x%x\r\n", am2302_state.data & 0xff);
   DEBUG("phase:%d errPhase:%d err:%d code:%d\r\n", 
 	am2302_state.phase, am2302_state.errorPhase, am2302_state.error, 
 	am2302_state.errorCode);
@@ -83,7 +99,7 @@ void am2302Start(){
   // dummy read capture
   uint16_t ta1_capture = TA1CCR1;
 
-  am2302_dump();
+  //am2302_dump();
 
   am2302Low();
   
@@ -214,8 +230,6 @@ void am2302Finish(){
 	am2302_error(am2302_unexpOverflow);
       }
       break;
-    /* case 5: */
-    /*   break; */
     default:
       while(!(TA1CCTL1 & CCIFG) && !(TA1CTL & TAIFG));
       if(TA1CCTL1 & CCIFG){
@@ -233,6 +247,7 @@ void am2302Finish(){
     am2302_state.timing[am2302_state.phase] = 
       ta1_capture - am2302_state.last_ta1;
     am2302_state.last_ta1 = ta1_capture;
+    
     if(newPhase >= 86)
       newPhase = -1;
     am2302_state.phase = newPhase;
@@ -244,11 +259,21 @@ void am2302Finish(){
     while(!am2302_state.reset); // wait for am2302_overflowEvent to set reset
     am2302_state.reset = 0;
     DEBUG("am2302 error\r\n");
+    am2302_dump(&am2302_state);
   }
-  am2302_dump(&am2302_state);
   if(!am2302_state.error && am2302_state.phase == -1){
     // normal read
     am2302_state.ta1_overflows = 0;
+
+    // calculate data from timings
+    int i;
+    for(i = 0; i < 40; i++){
+      int index = 6 + 2 * i;
+      if(am2302_state.timing[index] > 60)
+	am2302_state.data |= ((uint64_t)1 << (39 - i));
+    }
+    am2302_dump(&am2302_state);
+
     while(!am2302_state.reset); // wait for am2302_overflowEvent to set reset
     am2302_state.reset = 0;
     DEBUG("am2302 ready\r\n");

@@ -19,6 +19,7 @@
 
 #include "wdt.h"
 
+//!@todo this may not need to be critical
 __attribute__((critical)) int16_t usb_printf(const char * fmt, ...);
 /** \fn DEBUG 
  *  \brief DEBUG output. 
@@ -45,6 +46,7 @@ __attribute__((critical)) int16_t usb_printf(const char * fmt, ...);
 #endif
 
 //Function declarations
+void usb_printf_float(const float f);
 void usb_printf_init(void);
 void usb_receive_string(void);
 

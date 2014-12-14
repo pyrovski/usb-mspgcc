@@ -17,14 +17,14 @@ typedef struct {
   volatile int8_t   phase;
   volatile uint8_t  errorPhase;
   volatile uint8_t  bit         :6 ;
-  union {
-    volatile struct {
-      volatile int16_t  temperature;
-      volatile uint16_t relativeHumidity;
-      volatile uint8_t  checksum;
-    };
-    volatile uint64_t data       :40;
-  };
+  /* union { */
+  /*   volatile struct { */
+  /*     volatile int16_t  temperature; */
+  /*     volatile uint16_t relativeHumidity; */
+  /*     volatile uint8_t  checksum; */
+  /*   }; */
+  volatile uint64_t data       :40;
+  /* }; */
   volatile uint8_t  level        :1 ;
   volatile uint8_t  ta1_overflows:6 ;
   volatile uint8_t  newData      :1 ;
@@ -32,7 +32,7 @@ typedef struct {
   volatile uint8_t  error        :1 ;
   volatile uint8_t  errorCode    :3 ;
 
-  volatile uint16_t timing[100];
+  volatile uint8_t timing[100];
   volatile uint16_t last_ta1;
   volatile uint8_t dbit;
 

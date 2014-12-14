@@ -1,3 +1,4 @@
+#include <math.h>
 #include "usb_printf.h"
 #include "globals.h"
 #include "am2302.h"
@@ -5,6 +6,11 @@
 
 void init_ports(void);
 void init_clock(void);
+
+void usb_printf_float(const float f){
+  int i = (int)f;
+  DEBUG("%d.%d", i, 10.0f * (f - i));
+}
 
 volatile uint8_t usb_printf_state = USB_DISABLED;
 __attribute__((critical)) int16_t usb_printf(const char * fmt, ...) {

@@ -22,5 +22,3 @@ uint32_t PPD_tot_ticks = 0, PPD_tot_down_ticks = 0;
 float PPD_last_10_duty = 0;
 
 volatile am2302_state_s am2302_state;
-
-volatile uint16_t am2302_timing[8];
